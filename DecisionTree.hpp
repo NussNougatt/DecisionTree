@@ -13,26 +13,27 @@ class DecisionTree
 {
   public:
     Node* root;
-    const int min_samples;
-    const int max_depth;
+    int min_samples;
+    int max_depth;
 
     DecisionTree(int min_samples, int max_depth);
 
     ~DecisionTree();
 
-    Node* build_tree(DataFrame data, int label_column);
+    Node* build_tree(DataFrame data, int label_column, int depth);
+    bestSplit best_split(DataFrame data, int label_column, int n_features);
+    DataFrames split(const DataFrame& data, size_t feature_idx, float threshold);
+    float information_gain(const std::vector<float>& parent_labels, 
+                            const std::vector<float>& left_labels, 
+                            const std::vector<float>& right_labels);
+    float entropy(const std::vector<float>& y);
+    void fit(DataFrame X, std::vector<float> y);
+    std::vector<float> predict(const DataFrame& X);
+    float predict_class(const std::vector<float>& row, Node* node);
 
-    bestSplit best_split(DataFrame data, int n_features);
-
-    DataFrames split(DataFrame data, int feature_idx, float threshold);
-
-    float information_gain(DataFrame parent_labels, DataFram left_labels, DataFrame right_labels);
-
-    float entropy(DataFrame labels);
-
-    void fit(DataFrame X, DataFrame y);
-
-    float[] predict(DataFrame X);
+    std::vector<float> isolate_column(const DataFrame& data, size_t col_idx);
+    DataFrame drop_column(const DataFrame& data, size_t col_idx);
+    float most_common(const std::vector<float>& y);
 };
 
 

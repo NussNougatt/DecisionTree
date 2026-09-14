@@ -27,7 +27,7 @@ struct Node
 
   float value;
 
-  Node(Node& left, Node& right, int feature_idx, float threshold, int information_gain);
+  Node(Node* left, Node* right, int feature_idx, float threshold, int information_gain);
 
   Node(float value);
 

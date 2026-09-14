@@ -9,75 +9,63 @@
 
 DecisionTree::DecisionTree(int min_samples, int max_depth)
 {
-  this.min_samples = min_samples;
-  this.max_depth = max_depth;
+  this->min_samples = min_samples;
+  this->max_depth = max_depth;
+  this->root = nullptr;
 }
 
-Node* DecisionTree::build_tree(DataFrame data, int label_column)
+Node* DecisionTree::build_tree(DataFrame data, int label_column, int depth)
 {
-  std::vector<float> y = isolate(data, label_column);
-  DataFrame X = without(data, y);
+  std::vector<float> y = isolate_column(data, label_column);
+  int n_features = static_cast<int>(data[0].size()) - 1;
+  int samples = static_cast<int>(data.size());
 
-  depth = 0;
-  samples = X.size();
-
-  if(depth <= this.max_depth && samples >= this.min_samples)
+  if(depth <= max_depth && samples >= min_samples)
   {
-    bestSplit best_split = best_split(DataFrame data, int n_features);
+    bestSplit best = find_best_split(data, label_column, n_features);
 
-    if(best_split.information_gain > 0)
+    if(best.information_gain > 0)
     {
-      Node left_child = build_tree(best_split.left, depth + 1);
-      Node right_child = build_tree(best_split.right, depth + 1);
+      Node left_child = build_tree(best.left, label_column, depth + 1);
+      Node right_child = build_tree(best.right, label_column, depth + 1);
 
-      return new Node(best_split.left, best_split.right, best_split.feature_idx, best_split.threshold, best_split.information_gain);
+      return new Node(left_child, right_child, best.feature_idx, best.threshold, best.information_gain);
     }
   }
   
-  int most_common = 0;
-  std::unordered_map<float, int> freqs;
-  for(const auto& n : y):
-  {
-    freqs[n]++;
-    if(freqs[n] > freqs[most_common])
-    {
-      most_common = n;
-    }
-  }
-  int value = most_common;
-  return new Node(value);
+  float leaf_value = most_common(y);
+  return new Node(leaf_value);
 }
 
-//Implement sizeOfDataframe_y function
-bestSplit DecisionTree::best_split(DataFrame data, int n_features)
+bestSplit DecisionTree::find_best_split(DataFrame data, int label_column, int n_features)
 {
-  bestSplit best_split = new bestSplit;
+  bestSplit best;
+
+  std::vector<float> parent_labels = isolate_column(dataata, label_column);
   
-  for(int i = 0; i < n_features; i++)
+  for(int feature_idx = 0; feature_idx < n_features; feature_idx++)
   {
-    DataFrame feature_values = isolate(data, feature_idx);
-    std::set<float> thresholds(feature_values.bgein(), feature_values.end());
-    int thresholds_len = thresholds.size();
+    std::vector<float> feature_values = isolate_column(data, feature_idx);
+    std::set<float> thresholds(feature_values.begin(), feature_values.end());
 
-    for(int j = 0; j < thresholds_len; j++)
+    for(float threshold : thresholds)
     {
-      DataFrames split = split(data, feature_idx, thresholds[i]);
+      DataFrames candidate = split(data, feature_idx, thresholds[i]);
 
-      if(split.left != NULL && split.right != NULL)
+      if(!candidate.left.empty() && !candidate.right.empty())
       {
-        std::vector<float> parent_labels = isolate(data, sizeOfDataframe_y(data));
-        std::vector<float> left_labels = isolate(split.left, sizeOfDataframe_y(split.left));
-        std::vector<float> right_labels = isolate(split.right, sizeOfDataframe_y(split.right));
+        std::vector<float> left_labels = isolate_column(candidate.left, label_column);
+        std::vector<float> right_labels = isolate(candidate.right, label_column);
 
-        float information_gain = DecisionTree::information_gain(parent_labels, left_labels, right_labels);
+        float gain = information_gain(parent_labels, left_labels, right_labels);
 
-        if(information_gain > best_split.information_gain)
+        if(gain > best.information_gain)
         {
-          best_split.information_gain = information_gain;
-          best_split.threshold = thresholds[j];
-          best_split.feature_idx = i;
-          best_split.left = split.left;
-          best_split.right = split.right;
+          best.information_gain = gain;
+          best.threshold = threshold;
+          best.feature_idx = feature_idx;
+          best.left = candidate.left;
+          best.right = candidate.right;
         }
       }
     }
@@ -85,29 +73,28 @@ bestSplit DecisionTree::best_split(DataFrame data, int n_features)
     return best_split;
 }
 
-DataFrames DecisionTree::split(const DataFrame& data, size_t feature_idx, float thresholds)
+DataFrames DecisionTree::split(const DataFrame& data, size_t feature_idx, float threshold)
 {
-  DataFrames split;
-  
-  DataFrame left = new DataFrame;
-  DataFrame right = new DataFrame;
+  DataFrames output;
 
   for(size_t i = 0; i < data.size(); i++)
   {
     if(data[i][feature_idx] <= threshold)
     {
-      result.left.push_back(data[i]);
+      output.left.push_back(data[i]);
     }
     else 
     {
-      result.right.push_back(data[i]);  
+      output.right.push_back(data[i]);
     }
  }
   
-  return split;
+  return output;
 }
 
-float DecisionTree::information_gain(std::vector<int> parent_labels, std::vector<int> left_labels, std::vector<int> right_labels)
+float DecisionTree::information_gain(const std::vector<float>& parent_labels, 
+                                      const std::vector<float>& left_labels, 
+                                      const std::vector<float>& right_labels)
 {
   float left_weight = static_cast<float>(left_labels.size()) / parent_labels.size();
   float right_weight = static_cast<float>(right_labels.size()) / parent_labels.size();
@@ -117,10 +104,12 @@ float DecisionTree::information_gain(std::vector<int> parent_labels, std::vector
   return information_gain;
 }
 
-float DecisionTree::entropy(std::vector<int> y)
+float DecisionTree::entropy(const std::vector<float>& y)
 {
-  float entropy = 0;
-  std::set<int> class_labels(y.begin(), y.end());
+  if(y.empty()) return 0.0f;
+
+  float entropy = 0.0f;
+  std::set<float> class_labels(y.begin(), y.end());
   
   for(const auto& class_label : class_labels)
   {
@@ -137,7 +126,7 @@ float DecisionTree::entropy(std::vector<int> y)
   return entropy;
 }
 
-void DecisionTree::fit(DataFrame X, DataFrame y)
+void DecisionTree::fit(DataFrame X, std::vector<float> y)
 {
   DataFrame data;
   data.reserve(X.size());
@@ -149,10 +138,11 @@ void DecisionTree::fit(DataFrame X, DataFrame y)
     data.push_back(row);
   }
 
-  root = build_tree(data, static_cast<int>(data.size()));
+  int label_column = static_cast<int>(data[0].size()) - 1
+  root = build_tree(data, label_column, 0);
 }
 
-std::vector<int> DecisionTree::predict(DataFrame X, Node root)
+std::vector<int> DecisionTree::predict(const DataFrame& X)
 {
   std::vector<int> predictions;
   predictions.reserve(X.size());
@@ -165,14 +155,14 @@ std::vector<int> DecisionTree::predict(DataFrame X, Node root)
   return predictions;
 }
 
-int DecisionTree::predict_class(const std::vector<int>& row, Node* node)
+float DecisionTree::predict_class(const std::vector<float>& row, Node* node)
 {
-  if(node ->.has_value())
+  if(node->is_leaf())
   {
-    return node->value.value();
+    return node->value;
   }
 
-  int feature_value = row[node->feature_idx];
+  float feature_value = row[node->feature_idx];
   if(feature_value <= node->threshold)
   {
     return predict_class(row, node->left);
@@ -183,26 +173,49 @@ int DecisionTree::predict_class(const std::vector<int>& row, Node* node)
   }
 }
 
-DataFrame DecisionTree::without_last(DataFrame data)
+DataFrame DecisionTree::drop_column(const DataFrame& data, size_t col_idx)
 {
-  for(const auto& row : data)
+  DataFrame result = data;
+
+  for(auto& row : result)
   {
-    row.pop_back();
+    row.erase(row.begin() + col_idx);
   }
 
-  return data;
+  return result;
 }
 
-std::vector<float> DecisionTree::isolate(DataFrame data)
+std::vector<float> DecisionTree::isolate(const DataFrame& data, size_t col_idx)
 {
   std::vector<float> column;
+  column.reserve(data.size());
 
   for(const auto& row : data)
   {
-    column.push_back(row[row.size() - 1]);
+    column.push_back(row[col_idx]);
   }
 
   return column;
+}
+
+
+float DecisionTree::most_common(const std::vector<float>& y)
+{
+  std::unordered_map<float, int> freqs;
+  float best_label = y[0];
+  int best_count = 0;
+
+  for(float label : y)
+  {
+    int count = ++freqs[label];
+    if(count > best_count)
+    {
+      best_count = count;
+      best_label = label;
+    }
+  }
+
+  return best_label;
 }
 
 
