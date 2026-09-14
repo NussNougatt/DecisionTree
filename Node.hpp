@@ -2,6 +2,7 @@
 #define NODE_HPP
 
 #include <vector>
+#include <limits>
 
 using DataFrame = std::vector<std::vector<float>>;
 
@@ -22,12 +23,12 @@ struct Node
   Node* right;
   int feature_idx;
   float threshold;
-  int information_gain;
+  float information_gain;
   bool is_leaf;
 
   float value;
 
-  Node(Node* left, Node* right, int feature_idx, float threshold, int information_gain);
+  Node(Node* left, Node* right, int feature_idx, float threshold, float information_gain);
 
   Node(float value);
 

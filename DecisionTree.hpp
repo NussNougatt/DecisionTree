@@ -21,13 +21,13 @@ class DecisionTree
     ~DecisionTree();
 
     Node* build_tree(DataFrame data, int label_column, int depth);
-    bestSplit best_split(DataFrame data, int label_column, int n_features);
+    bestSplit find_best_split(DataFrame data, int label_column, int n_features);
     DataFrames split(const DataFrame& data, size_t feature_idx, float threshold);
     float information_gain(const std::vector<float>& parent_labels, 
                             const std::vector<float>& left_labels, 
                             const std::vector<float>& right_labels);
     float entropy(const std::vector<float>& y);
-    void fit(DataFrame X, std::vector<float> y);
+    void fit(DataFrame data);
     std::vector<float> predict(const DataFrame& X);
     float predict_class(const std::vector<float>& row, Node* node);
 

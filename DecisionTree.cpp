@@ -26,8 +26,8 @@ Node* DecisionTree::build_tree(DataFrame data, int label_column, int depth)
 
     if(best.information_gain > 0)
     {
-      Node left_child = build_tree(best.left, label_column, depth + 1);
-      Node right_child = build_tree(best.right, label_column, depth + 1);
+      Node* left_child = build_tree(best.left, label_column, depth + 1);
+      Node* right_child = build_tree(best.right, label_column, depth + 1);
 
       return new Node(left_child, right_child, best.feature_idx, best.threshold, best.information_gain);
     }
@@ -41,7 +41,7 @@ bestSplit DecisionTree::find_best_split(DataFrame data, int label_column, int n_
 {
   bestSplit best;
 
-  std::vector<float> parent_labels = isolate_column(dataata, label_column);
+  std::vector<float> parent_labels = isolate_column(data, label_column);
   
   for(int feature_idx = 0; feature_idx < n_features; feature_idx++)
   {
@@ -50,12 +50,12 @@ bestSplit DecisionTree::find_best_split(DataFrame data, int label_column, int n_
 
     for(float threshold : thresholds)
     {
-      DataFrames candidate = split(data, feature_idx, thresholds[i]);
+      DataFrames candidate = split(data, feature_idx, threshold);
 
       if(!candidate.left.empty() && !candidate.right.empty())
       {
         std::vector<float> left_labels = isolate_column(candidate.left, label_column);
-        std::vector<float> right_labels = isolate(candidate.right, label_column);
+        std::vector<float> right_labels = isolate_column(candidate.right, label_column);
 
         float gain = information_gain(parent_labels, left_labels, right_labels);
 
@@ -69,8 +69,9 @@ bestSplit DecisionTree::find_best_split(DataFrame data, int label_column, int n_
         }
       }
     }
+  }
   
-    return best_split;
+  return best;
 }
 
 DataFrames DecisionTree::split(const DataFrame& data, size_t feature_idx, float threshold)
@@ -126,25 +127,15 @@ float DecisionTree::entropy(const std::vector<float>& y)
   return entropy;
 }
 
-void DecisionTree::fit(DataFrame X, std::vector<float> y)
+void DecisionTree::fit(DataFrame X)
 {
-  DataFrame data;
-  data.reserve(X.size());
-
-  for(size_t i = 0; i < X.size(); i++)
-  {
-    std::vector<float> row = X[i];
-    row.push_back(y[i]);
-    data.push_back(row);
-  }
-
-  int label_column = static_cast<int>(data[0].size()) - 1
-  root = build_tree(data, label_column, 0);
+  int label_column = static_cast<int>(X[0].size()) - 1;
+  root = build_tree(X, label_column, 0);
 }
 
-std::vector<int> DecisionTree::predict(const DataFrame& X)
+std::vector<float> DecisionTree::predict(const DataFrame& X)
 {
-  std::vector<int> predictions;
+  std::vector<float> predictions;
   predictions.reserve(X.size());
 
   for(const auto& row : X)
@@ -157,7 +148,7 @@ std::vector<int> DecisionTree::predict(const DataFrame& X)
 
 float DecisionTree::predict_class(const std::vector<float>& row, Node* node)
 {
-  if(node->is_leaf())
+  if(node->is_leaf)
   {
     return node->value;
   }
@@ -185,7 +176,7 @@ DataFrame DecisionTree::drop_column(const DataFrame& data, size_t col_idx)
   return result;
 }
 
-std::vector<float> DecisionTree::isolate(const DataFrame& data, size_t col_idx)
+std::vector<float> DecisionTree::isolate_column(const DataFrame& data, size_t col_idx)
 {
   std::vector<float> column;
   column.reserve(data.size());
@@ -216,6 +207,11 @@ float DecisionTree::most_common(const std::vector<float>& y)
   }
 
   return best_label;
+}
+
+DecisionTree::~DecisionTree()
+{
+  delete root;
 }
 
 
