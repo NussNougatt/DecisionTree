@@ -78,14 +78,16 @@ tSplit train_test_split(const DataFrame& data)
 
 void print_tree(Node* node, int depth = 0)
 {
-  std::string indent(depth * 2, ' ');
+  std::string indent(depth * 2, '-');
 
   if(node->is_leaf)
   {
-    std::cout << indent << "Leaf: predict " << node->value << std::endl;
+    std::cout << indent << " Leaf: prediction " << node->value << std::endl;
     return;
   }
-  std::cout << indent << "Feature " << node->feature_idx << " <= " << node->threshold << " (gain=" << node->information_gain << ")" << std::endl;
+  std::cout << indent << " Feature: " << node->feature_idx
+            << " threshold: " << node->threshold
+            << " information_gain: " << node->information_gain << std::endl;
   print_tree(node->left, depth + 1);
   print_tree(node->right, depth + 1);
 }
